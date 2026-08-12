@@ -4,14 +4,21 @@
     <title>Hello World Page</title>
 </head>
 <body>
-    {# <p>{{"Welcome "+ first_name}}</p> #}
-    <h2>{{first_name | upper}}</h2>
-    <h2>{{first_name | lower}}</h2>
-    <h2>{{"mohit kumar" | capitalize}}</h2>
-    <h2>Total Course : {{course | length}}</h2>
-    <h2>City : {{city}}</h2>
-    <h2>Original Price : {{price}}</h2>
-    <p>GST Included Price: {{price+90}}</p>
-    <p>{{10*20}}</p>
+    {% if is_logged_in %}
+    <h1>Welcome Back!</h1>
+    {% else %}
+    <h1>Please Login </h1>
+    {% endif %}
+
+    {% if marks >= 90%}
+    <h2>Grade A</h2>
+    {% elif marks >= 75 %}
+    <h2>Grade B</h2>
+    {% elif marks >= 50 %}
+    <h2>Grade C</h2>
+    {% else %}
+    <h1>Fail</h1>
+    {% endif %}
+
 </body>
 </html>
