@@ -4,9 +4,14 @@
     <title>Hello World Page</title>
 </head>
 <body>
-    <h1>Hello, {{ name }}</h1>
-    <h2>Course : {{course}}</h2>
+    {# <p>{{"Welcome "+ first_name}}</p> #}
+    <h2>{{first_name | upper}}</h2>
+    <h2>{{first_name | lower}}</h2>
+    <h2>{{"mohit kumar" | capitalize}}</h2>
+    <h2>Total Course : {{course | length}}</h2>
     <h2>City : {{city}}</h2>
-    <h2>Age : {{age}}</h2>
+    <h2>Original Price : {{price}}</h2>
+    <p>GST Included Price: {{price+90}}</p>
+    <p>{{10*20}}</p>
 </body>
 </html>
