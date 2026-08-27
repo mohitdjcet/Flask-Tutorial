@@ -1,7 +1,15 @@
 {% extends "base.html" %}
 {% block content %}
+<div class='container'>
 <h1>Welcome to Flask Course</h1>
-<button onclick="showMsg()">Click me</button>
-<img src="{{url_for('static',filename='images/logo.png')}}" alt="Logo">
+<button onclick="showMsg()" class='btn btn-danger'>Click me</button>
 <p>This is Home Page</p>
+</div>
+<div class='container'>
+    <div class='row'>
+        <div class="col-md-4">Course 1</div>
+        <div class="col-md-4">Course 2</div>
+        <div class="col-md-4">Course 3</div>
+    </div>
+</div>
 {% endblock %}
