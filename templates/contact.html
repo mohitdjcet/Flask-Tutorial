@@ -1,4 +1,19 @@
 {% extends "base.html" %}
 {% block content %}
 <h2>Contact-us Page</h2>
+<form action="/contact" method='POST'>
+    <div>
+        <label>Name: <lable>
+        <input type="text" name="username" placeholder="Enter you Name" >
+    </div>
+    <div>
+        <label>Email: <lable>
+        <input type="email" name="email" placeholder="Enter you Email" >
+    </div>
+     <div>
+        <label>Message: <lable>
+        <textarea name="message" placeholder="Enter Your Message"></textarea>
+    </div>
+    <button type="submit">Send Message</button>
+</form>
 {% endblock %}
