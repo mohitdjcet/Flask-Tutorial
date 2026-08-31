@@ -4,17 +4,16 @@
 <form action="/contact" method='POST'>
     <div>
         <label>Name: <lable>
-        <input type="text" name="username" placeholder="Enter you Name" >
+        <input type="text" name="name" placeholder="Enter you Name" >
     </div>
     <div>
         <label>Email: <lable>
         <input type="email" name="email" placeholder="Enter you Email" >
     </div>
      <div>
-        <label>Message: <lable>
-        <textarea name="message" placeholder="Enter Your Message"></textarea>
+        <label>Age: <lable>
+        <input type="number" name="age" placeholder="Enter you Age" >
     </div>
-    <button type="submit">Send Message</button>
+    <button type="submit">Register</button>
 </form>
-<div>{{name}}</div>
 {% endblock %}
