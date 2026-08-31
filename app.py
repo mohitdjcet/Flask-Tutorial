@@ -13,14 +13,10 @@ def about():
 @app.route("/contact", methods=["GET","POST"])
 def contact():
     if request.method == 'POST':
-        name = request.form.get("username")
-        return f"Hello , {name}"
-    return render_template("contact.html")
-
-@app.route("/search")
-def search():
-    query = request.args.get("query")
-    return f" You searched for : {query}"
+        name = request.form["username"]
+        email = request.form.get("email")
+        message = request.form.get("message")
+    return render_template("contact.html",name=name)
 
 if __name__ == "__main__":
     app.run(debug=True)
