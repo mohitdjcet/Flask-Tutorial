@@ -1,8 +1,25 @@
-from flask import Flask,render_template, request,redirect,url_for,flash
+from flask import Flask,render_template, request,redirect,url_for,flash,session
 
 app = Flask(__name__)
 
 app.secret_key = "change-this-in-prod"
+
+@app.route("/login")
+def login():
+    session["username"]= "Mohit"
+    return "Login Successful !"
+
+@app.route("/deshboard")
+def deshboard():
+    username = session.get("username")
+    if not username:
+        return "Please Login First !"
+    return f" Welcome, {username}"
+
+@app.route("/logout")
+def logout():
+    session.pop("username",None)
+    return "Logged Out !"
 
 @app.route("/")
 def home():
