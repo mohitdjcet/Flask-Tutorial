@@ -1,8 +1,27 @@
 from flask import Flask,render_template, request,redirect,url_for,flash,session
+import os
 
 app = Flask(__name__)
 
 app.secret_key = "change-this-in-prod"
+
+UPLOAD_FOLDER = "uploads"
+
+os.makedirs(UPLOAD_FOLDER,exist_ok=True)
+
+@app.route("/upload", methods=["GET","POST"])
+def upload():
+    if request.method == "POST":
+        file = request.files.get("file")
+        if not file:
+            return "Please select a file !"
+        if file.filename == "":
+            return "Please select a file !"
+        file.save(
+            os.path.join(UPLOAD_FOLDER,file.filename)
+        )
+        return "File uploaded successfully !"
+    return render_template("upload.html")
 
 @app.errorhandler(404)
 def page_not_found(error):
