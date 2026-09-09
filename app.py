@@ -1,9 +1,12 @@
 from flask import Flask,render_template, request,redirect,url_for,flash,session
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
 
-app.secret_key = "change-this-in-prod"
+app.config["SECRET_KEY"] = os.getenv("SECRET_KEY")
 
 UPLOAD_FOLDER = "uploads"
 
