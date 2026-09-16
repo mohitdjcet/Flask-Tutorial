@@ -89,6 +89,16 @@ def updated_user(id):
          }
     })
 
+@app.route("/users/<int:id>", methods=["DELETE"])
+def delete_user(id):
+     user = db.get_or_404(User,id)
+     db.session.delete(user)
+     db.session.commit()
+
+     return jsonify({
+          "message":"User deleted Successfully"
+     })
+
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
