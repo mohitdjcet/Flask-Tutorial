@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask,request,jsonify
 from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
@@ -17,6 +17,27 @@ class User(db.Model):
 @app.route("/")
 def home():
     return "Flask + SQLite + SQLAlchemy is working !"
+
+@app.route("/create-user", methods=["POST"])
+def create_user():
+    data = request.get_json()
+
+    name = data.get("name")
+    email = data.get("email")
+    age = data.get("age")
+
+    user = User(
+        name=name,
+        email=email,
+        age=age
+    )
+
+    db.session.add(user)
+    db.session.commit()
+    return jsonify({
+        "message":"User Created Successfully !",
+        "user_id":user.id
+    })
 
 if __name__ == "__main__":
     with app.app_context():
