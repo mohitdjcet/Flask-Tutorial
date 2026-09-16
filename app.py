@@ -1,4 +1,4 @@
-from flask import Flask,request,jsonify
+from flask import Flask,request,jsonify,render_template
 from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
@@ -37,6 +37,34 @@ def create_user():
     return jsonify({
         "message":"User Created Successfully !",
         "user_id":user.id
+    })
+
+@app.route("/get-user", methods=["GET"])
+def get_users():
+    users = User.query.all()
+    users_data = []
+    for user in users:
+        users_data.append({
+            "id":user.id,
+            "name":user.name,
+            "email":user.email,
+            "age":user.age
+        })
+    return jsonify(users_data)
+
+@app.route("/users1")
+def users():
+    users = User.query.all()
+    return render_template("user.html",users=users)
+
+@app.route("/users/<int:id>", methods=["GET"])
+def get_user(id):
+    user = db.get_or_404(User,id)
+    return jsonify({
+        "id":user.id,
+        "name":user.name,
+        "email":user.email,
+        "age":user.age
     })
 
 if __name__ == "__main__":
