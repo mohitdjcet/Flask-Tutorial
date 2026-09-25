@@ -129,6 +129,77 @@ def get_user_orders(user_id):
         "orders":orders_data
     })
 
+@app.route("/users/filter",methods=["GET"])
+def filter_users():
+    age = request.args.get("age",type=int)
+    users = User.query.filter(
+        User.age >=25
+    ).order_by(
+        User.age.asc()
+    ).all()
+    users_data = []
+    for user in users:
+        users_data.append({
+            "id":user.id,
+            "name":user.name,
+            "email":user.email,
+            "age":user.age
+        })
+    return jsonify(users_data)
+
+@app.route("/users/orders",methods=["GET"])
+def user_orders():
+    result = db.session.query(
+        User.name,
+        Order.product,
+        Order.amount
+    ).join(
+        Order,
+        User.id == Order.user_id
+    )
+    data = []
+
+    for name,product,amount in result:
+        data.append({
+            "user":name,
+            "prducts":product,
+            "amount":amount
+        })
+    return jsonify(data)
+
+@app.route("/users", methods=["GET"])
+def get_users():
+    page = request.args.get(
+        "page",
+        1,
+        type=int
+    )
+    per_page = request.args.get(
+        "per_page",
+        2,
+        type=int
+    )
+    pagination = User.query.paginate(
+        page=page,
+        per_page=per_page
+    )
+    users = pagination.items
+    user_data = []
+    for user in users:
+        user_data.append({
+            "id":user.id,
+            "name":user.name,
+            "email":user.email,
+            "age":user.age
+        })
+    return jsonify({
+        "page":pagination.page,
+        "per_page":pagination.per_page,
+        "total":pagination.total,
+        "pages":pagination.pages,
+        "users":user_data
+    })
+
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
