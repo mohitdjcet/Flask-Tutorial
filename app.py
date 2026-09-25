@@ -43,6 +43,31 @@ class User(db.Model):
     age = db.Column(
         db.Integer
     )
+    orders = db.relationship(
+        "Order",
+        backref = "user",
+        lazy = True
+    )
+
+class Order(db.Model):
+    __tablename__ = "orders"
+    id = db.Column(
+        db.Integer,
+        primary_key = True
+    )   
+    product = db.Column(
+        db.String(100),
+        nullable=False
+    )
+    amount = db.Column(
+        db.Float,
+        nullable=False
+    )
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id"),
+        nullable=False
+    )
 
 @app.route("/")
 def home():
@@ -67,6 +92,42 @@ def create_user():
         "message":"User Created Successfully !",
         "user_id":user.id
     }),201
+
+@app.route("/orders", methods=["POST"])
+def create_order():
+    data = request.get_json()
+    product = data.get("product")
+    amount = data.get("amount")
+    user_id = data.get("user_id")
+
+    order = Order(
+        product=product,
+        amount=amount,
+
+        user_id=user_id
+    )
+    db.session.add(order)
+    db.session.commit()
+    return jsonify({
+        "message":"Order Created Successfully !",
+        "order_id":order.id
+    }),201
+
+@app.route("/users/<int:user_id>/orders", methods=["GET"])
+def get_user_orders(user_id):
+    user = db.get_or_404(User,user_id)
+    orders = user.orders
+    orders_data = []
+    for order in orders:
+        orders_data.append({
+            "id":order.id,
+            "product":order.product,
+            "amount":order.amount
+        })
+    return jsonify({
+        "user":user.name,
+        "orders":orders_data
+    })
 
 if __name__ == "__main__":
     with app.app_context():
