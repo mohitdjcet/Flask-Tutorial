@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask,request,jsonify
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import text
 from dotenv import load_dotenv
@@ -25,17 +25,50 @@ app.config["SQLALCHEMY_DATABASE_URI"]= DATABASE_URL
 
 db = SQLAlchemy(app)
 
+class User(db.Model):
+    __tablename__ = "users"
+
+    id = db.Column(
+        db.Integer,
+        primary_key = True
+    )
+    name = db.Column(
+        db.String(100),
+        nullable=False
+    )
+    email = db.Column(
+        db.String(120),
+        nullable=False
+    )
+    age = db.Column(
+        db.Integer
+    )
+
 @app.route("/")
 def home():
-    return "Flask application is running !"
+    return "Flask + MySQL is working !"
 
-@app.route("/db-test")
-def db_test():
-    result = db.session.execute(
-        text("SELECT 1")
+@app.route("/users",methods=["POST"])
+def create_user():
+    data = request.get_json()
+    name = data.get("name")
+    email = data.get("email")
+    age = data.get("age")
+
+    user = User(
+        name=name,
+        email=email,
+        age=age
     )
-    value = result.scalar()
-    return f"MySQL connected Fine ! Result : {value}"
+    db.session.add(user)
+    db.session.commit()
+
+    return jsonify({
+        "message":"User Created Successfully !",
+        "user_id":user.id
+    }),201
 
 if __name__ == "__main__":
+    with app.app_context():
+        db.create_all()
     app.run(debug=True)
