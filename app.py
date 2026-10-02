@@ -83,5 +83,85 @@ def get_id_users(user_id):
         "age":user["age"]
     })
 
+@app.route("/users/<user_id>", methods=["PUT"])
+def update_user(user_id):
+    user_id = ObjectId(user_id)
+    data = request.get_json()
+
+    result = users_collection.update_one(
+        {"_id":user_id},
+        {
+            "$set":{
+                "name": data.get("name"),
+                "email": data.get("email"),
+                "age": data.get("age"),
+            }
+        }
+    )
+
+    if result.matched_count == 0:
+        return jsonify({
+            "message":"User Not found"
+        }),404
+
+    return jsonify({
+        "message":"User Updated Successfully !"
+    })
+
+@app.route("/users/<user_id>", methods=["PATCH"])
+def update_user_patch(user_id):
+    user_id = ObjectId(user_id)
+    data = request.get_json()
+
+    update_data = {}
+
+    if "name" in data:
+        update_data["name"]= data["name"]
+
+    if "email" in data:
+        update_data["email"]= data["email"]
+
+    if "age" in data:
+        update_data["age"]= data["age"]
+
+    if not update_data:
+        return jsonify({
+            "message":"No data provided for update"
+        }),400
+
+    result = users_collection.update_one(
+        {"_id":user_id},
+        {
+            "$set":update_data
+        }
+    )
+
+    if result.matched_count == 0:
+        return jsonify({
+            "message":"User Not found"
+        }),404
+
+    return jsonify({
+        "message":"User Updated Successfully !"
+    })
+
+
+@app.route("/users/<user_id>", methods=["DELETE"])
+def delete_user(user_id):
+    user_id = ObjectId(user_id)
+
+    result = users_collection.delete_many({
+        "age":{
+            "$lt":18
+        }
+    })
+    if result.deleted_count == 0:
+        return jsonify({
+            "message":"User not found"
+        }),404
+    return jsonify({
+        "message":"User deleted successfully !"
+    })
+
 if __name__ == "__main__":
     app.run(debug=True)
