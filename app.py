@@ -163,5 +163,42 @@ def delete_user(user_id):
         "message":"User deleted successfully !"
     })
 
+@app.route("/users/search", methods=["GET"])
+def search_users():
+    search = request.args.get("search","")
+    users = users_collection.find({
+       "name":{
+           "$regex":search,
+           "$options":"i"
+       }
+    })
+    user_data = []
+    for user in users:
+        user_data.append({
+            "id":str(user['_id']),
+            "name":user["name"],
+            "age":user["age"],
+            "city":user["city"],
+        })
+    return jsonify(user_data)
+
+@app.route("/users/filter", methods=["GET"])
+def filter_users():
+    min_age = request.args.get("min_age",type=int)
+    users = users_collection.find({
+       "age":{
+            "$gte":min_age
+       }
+    })
+    user_data = []
+    for user in users:
+        user_data.append({
+            "id":str(user['_id']),
+            "name":user["name"],
+            "age":user["age"],
+            "city":user["city"],
+        })
+    return jsonify(user_data)
+
 if __name__ == "__main__":
     app.run(debug=True)
