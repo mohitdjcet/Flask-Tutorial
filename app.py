@@ -1,206 +1,33 @@
-from flask import Flask,request,jsonify
-from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import text
-from dotenv import load_dotenv
-from urllib.parse import quote_plus
-import os
-
-load_dotenv()
+from flask import Flask
+from pymongo import MongoClient
 
 app = Flask(__name__)
 
-DB_USERNAME = os.getenv("DB_USERNAME")
-DB_PASSWORD = quote_plus(os.getenv("DB_PASSWORD"))
-DB_HOST = os.getenv("DB_HOST")
-DB_PORT = os.getenv("DB_PORT")
-DB_NAME = os.getenv("DB_NAME")
+client = MongoClient("mongodb://localhost:27017")
 
-DATABASE_URL = (
-    f"mysql+pymysql://"
-    f"{DB_USERNAME}:{DB_PASSWORD}"
-    f"@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-)
+client.admin.command("ping")
 
-app.config["SQLALCHEMY_DATABASE_URI"]= DATABASE_URL
+print("MD connected Successfully !")
 
-db = SQLAlchemy(app)
-
-class User(db.Model):
-    __tablename__ = "users"
-
-    id = db.Column(
-        db.Integer,
-        primary_key = True
-    )
-    name = db.Column(
-        db.String(100),
-        nullable=False
-    )
-    email = db.Column(
-        db.String(120),
-        nullable=False
-    )
-    age = db.Column(
-        db.Integer
-    )
-    orders = db.relationship(
-        "Order",
-        backref = "user",
-        lazy = True
-    )
-
-class Order(db.Model):
-    __tablename__ = "orders"
-    id = db.Column(
-        db.Integer,
-        primary_key = True
-    )   
-    product = db.Column(
-        db.String(100),
-        nullable=False
-    )
-    amount = db.Column(
-        db.Float,
-        nullable=False
-    )
-    user_id = db.Column(
-        db.Integer,
-        db.ForeignKey("users.id"),
-        nullable=False
-    )
+db = client['flask_db']
+users_collection = db["users"]
 
 @app.route("/")
 def home():
-    return "Flask + MySQL is working !"
+    return "Flask is working !"
 
-@app.route("/users",methods=["POST"])
-def create_user():
-    data = request.get_json()
-    name = data.get("name")
-    email = data.get("email")
-    age = data.get("age")
-
-    user = User(
-        name=name,
-        email=email,
-        age=age
-    )
-    db.session.add(user)
-    db.session.commit()
-
-    return jsonify({
-        "message":"User Created Successfully !",
-        "user_id":user.id
-    }),201
-
-@app.route("/orders", methods=["POST"])
-def create_order():
-    data = request.get_json()
-    product = data.get("product")
-    amount = data.get("amount")
-    user_id = data.get("user_id")
-
-    order = Order(
-        product=product,
-        amount=amount,
-
-        user_id=user_id
-    )
-    db.session.add(order)
-    db.session.commit()
-    return jsonify({
-        "message":"Order Created Successfully !",
-        "order_id":order.id
-    }),201
-
-@app.route("/users/<int:user_id>/orders", methods=["GET"])
-def get_user_orders(user_id):
-    user = db.get_or_404(User,user_id)
-    orders = user.orders
-    orders_data = []
-    for order in orders:
-        orders_data.append({
-            "id":order.id,
-            "product":order.product,
-            "amount":order.amount
-        })
-    return jsonify({
-        "user":user.name,
-        "orders":orders_data
-    })
-
-@app.route("/users/filter",methods=["GET"])
-def filter_users():
-    age = request.args.get("age",type=int)
-    users = User.query.filter(
-        User.age >=25
-    ).order_by(
-        User.age.asc()
-    ).all()
-    users_data = []
-    for user in users:
-        users_data.append({
-            "id":user.id,
-            "name":user.name,
-            "email":user.email,
-            "age":user.age
-        })
-    return jsonify(users_data)
-
-@app.route("/users/orders",methods=["GET"])
-def user_orders():
-    result = db.session.query(
-        User.name,
-        Order.product,
-        Order.amount
-    ).join(
-        Order,
-        User.id == Order.user_id
-    )
-    data = []
-
-    for name,product,amount in result:
-        data.append({
-            "user":name,
-            "prducts":product,
-            "amount":amount
-        })
-    return jsonify(data)
-
-@app.route("/users", methods=["GET"])
-def get_users():
-    page = request.args.get(
-        "page",
-        1,
-        type=int
-    )
-    per_page = request.args.get(
-        "per_page",
-        2,
-        type=int
-    )
-    pagination = User.query.paginate(
-        page=page,
-        per_page=per_page
-    )
-    users = pagination.items
-    user_data = []
-    for user in users:
-        user_data.append({
-            "id":user.id,
-            "name":user.name,
-            "email":user.email,
-            "age":user.age
-        })
-    return jsonify({
-        "page":pagination.page,
-        "per_page":pagination.per_page,
-        "total":pagination.total,
-        "pages":pagination.pages,
-        "users":user_data
-    })
+@app.route("/add-user")
+def add_user():
+    user = {
+        "name":"Mohit",
+        "email":"mohit@gmail.com",
+        "age":30
+    }
+    result = users_collection.insert_one(user)
+    return{
+        "message":"User Inserted Successfully !",
+        "id": str(result.inserted_id)
+    }
 
 if __name__ == "__main__":
-    with app.app_context():
-        db.create_all()
     app.run(debug=True)
