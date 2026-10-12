@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>Todo App</title>
+
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/style.css') }}"
+    />
+  </head>
+
+  <body>
+    <div class="container">
+      <header class="header">
+        <h1>Todo App</h1>
+        <p>Manage Your Daily Task</p>
+      </header>
+
+      <form id="todoForm" class="todo-form">
+        <input
+          type="text"
+          id="todoInput"
+          placeholder="What do you want to do?"
+          autocomplete="off"
+        />
+        <button type="submit">Add Task</button>
+      </form>
+
+      <!-- Message -->
+      <div id="message"></div>
+
+      <!-- Todo Stats -->
+      <div class="stats">
+        <span>
+          Total:
+          <strong id="totalTasks">0</strong>
+        </span>
+
+        <span>
+          Completed:
+          <strong id="completedTasks">0</strong>
+        </span>
+
+        <span>
+          Pending:
+          <strong id="pendingTasks">0</strong>
+        </span>
+      </div>
+
+      <!-- Loading -->
+      <div id="loading" class="loading">Loading tasks...</div>
+
+      <!-- Todo List -->
+      <div id="todoList" class="todo-list"></div>
+
+      <!-- Empty State -->
+      <div id="emptyState" class="empty-state hidden">
+        <div class="empty-icon">📋</div>
+        <h3>No tasks yet</h3>
+        <p>Add your first task above.</p>
+      </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+  </body>
+</html>

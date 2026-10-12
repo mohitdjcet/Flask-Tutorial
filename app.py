@@ -1,146 +1,123 @@
-from flask import Flask,request,jsonify,session
-from pymongo import MongoClient
-from bson import ObjectId
-from werkzeug.security import generate_password_hash, check_password_hash
-import os
-from functools import wraps
+from flask import Flask,jsonify,request,render_template
+from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
 
-app.secret_key = os.environ.get("SECRET_KEY","dev-only-change-this")
+app.config["SQLALCHEMY_DATABASE_URI"]= "sqlite:///todo.db"
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"]=False
 
-client = MongoClient("mongodb://localhost:27017")
+db = SQLAlchemy(app)
 
-client.admin.command("ping")
-print("MD connected Successfully !")
-db = client['flask_db']
-users_collection = db["users"]
+class Todo(db.Model):
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+    title = db.Column(
+        db.String(200),
+        nullable=False
+    )
+    completed = db.Column(
+        db.Boolean,
+        default=False
+    )
+    def __repr__(self):
+        return f"<Todo {self.title}>"
 
-def login_required(f):
-    @wraps(f)
-    def decorated_function(*args,**kwargs):
-        if "user_id" not in session:
-            return jsonify({
-                "message":"Please login First"
-            }),401
-        return f(*args,**kwargs)
-    return decorated_function
+with app.app_context():
+    db.create_all()
 
 @app.route("/")
 def home():
-    return "Flask is working !"
+    return render_template("index.html")
 
-@app.route("/register", methods=["POST"])
-def register():
-    data = request.get_json(silent=True)
-
-    if not isinstance(data, dict):
-        return jsonify({
-            "message":"Valid JSON object is required"
+@app.route("/todos",methods=["POST"])
+def add_todos():
+    data = request.get_json(silent=True) or {}
+    title = data.get("title").strip()
+    if not title:
+        return({
+            "message":"Title is required !"
         }),400
-
-    name = data.get("name")
-    email = data.get("email")
-    password = data.get("password")
-
-    if not all(
-        isinstance(value,str) and value.strip()
-        for value in [name,email,password]
-    ):
-        return jsonify({
-            "message":"Name, email and password are required"
-        }),400
-
-    name = name.strip()
-    email = email.strip().lower()
-
-    if "@" not in email or "." not in email.rsplit("@",1)[-1]:
-        return jsonify({
-            "message":"Invalid email address"
-        }),400
-
-    if len(password)<8:
-        return jsonify({
-            "message":"Password must be at least 8 Char"
-        }),400
-
-    existing_user = users_collection.find_one({
-        "email":email
-    }) 
-    if existing_user:
-        return jsonify({
-            "message":"Email already registered"
-        })
-
-    hashed_password = generate_password_hash(password)
-
-    result = users_collection.insert_one({
-        "name":name,
-        "email":email,
-        "password":hashed_password
-    })
-
+    todo = Todo(
+        title = title
+    )
+    db.session.add(todo)
+    db.session.commit()
     return jsonify({
-        "message":"User Registration successfully !",
-        "user_id":str(result.inserted_id),
-        "name":name,
-        "email":email
+        "message":"Todo added Succesfully !",
+        "todo":{
+            "id":todo.id,
+            "title":todo.title,
+            "completed":todo.completed
+        }
     }),201
 
-@app.route("/login", methods=["POST"])
-def login():
-    data= request.get_json(silent=True)
-    if not isinstance(data, dict):
+@app.route("/todos/<int:todo_id>", methods=["PUT"])
+def update_todo(todo_id):
+    todo = db.session.get(Todo,todo_id)
+    if not todo:
         return jsonify({
-            "message": "Valid JSON object is required"
-        }), 400
-    email = data.get("email", "").strip().lower()
-    password= data.get("password","")
+            "message":"Todo not found"
+        }),404
+    data = request.get_json(silent=True) or {}
+    title = data.get("title")
+    completed = data.get("completed")
 
-    if not email or not password:
-        return jsonify({
-            "message":"Email and password are required !"
-        }),400
-    user = users_collection.find_one({
-        "email":email
-    })
-    if not user or not check_password_hash(
-        user.get("password",""),
-        password
-    ):
-        return jsonify({
-            "message":"Invalid Email or password"
-        }),401
+    if title is not None:
+        title = title.strip()
+        if not title:
+            return jsonify({
+                "message":"Title cannot be empty"
+            }),400
+        todo.title = title
 
-    session.clear()
-    session["user_id"]=str(user["_id"])
-    session["user_name"]= user.get("name","")
+
+    if completed is not None:
+        if not isinstance(completed,bool):
+            return jsonify({
+                "message":"Completed must be True or False"
+            }),400
+        todo.completed = completed
+
+    db.session.commit()
     return jsonify({
-        "message":"Login Successfully !",
-        "user":{
-            "id":str(user["_id"]),
-            "name": user.get("name",""),
-            "email": user["email"]
+        "message":"Todo Updated Successfully !",
+        "todo":{
+            "id":todo.id,
+            "title":todo.title,
+            "completed":todo.completed
         }
     }),200
 
-@app.route("/profile",methods=["GET"])
-@login_required
-def profile():
+@app.route("/todos", methods=["GET"])
+def get_todos():
+    todos = db.session.execute(
+        db.select(Todo).order_by(Todo.id.desc())
+    ).scalars().all()
     return jsonify({
-        "message":"Profile fetched successfully !",
-        "user":{
-            "id": session["user_id"],
-            "name":session.get("user_name","")
-        }
+        "todos":[
+            {
+                "id":todo.id,
+                "title":todo.title,
+                "completed":todo.completed
+            }
+            for todo in todos
+        ]
     }),200
 
-@app.route("/logout", methods=["POST"])
-@login_required
-def logout():
-    session.clear()
+@app.route("/todos/<int:todo_id>", methods=["DELETE"])
+def delete_todo(todo_id):
+    todo = db.session.get(Todo,todo_id)
+    if not todo:
+        return jsonify({
+            "message":"TODO not found"
+        }),404
+
+    db.session.delete(todo)
+    db.session.commit()
     return jsonify({
-        "message":"Logout successfully !"
+        "message":"Todo deleted Successfully"
     }),200
 
 if __name__ == "__main__":
