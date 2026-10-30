@@ -1,0 +1,56 @@
+
+{% extends "base.html" %}
+{% block title %}{{ 'Edit' if student else 'Add' }} Student{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+        <h2 class="fw-bold mb-4">
+          {{ 'Edit Student' if student else 'Add Student' }}
+        </h2>
+
+        <form method="POST">
+          <div class="mb-3">
+            <label for="name" class="form-label">Full Name</label>
+            <input class="form-control" id="name" name="name"
+                   maxlength="100" required
+                   value="{{ request.form.get('name', student.name if student else '') }}">
+          </div>
+
+          <div class="mb-3">
+            <label for="email" class="form-label">Email</label>
+            <input class="form-control" type="email" id="email" name="email"
+                   maxlength="120" required
+                   value="{{ request.form.get('email', student.email if student else '') }}">
+          </div>
+
+          <div class="mb-3">
+            <label for="course" class="form-label">Course</label>
+            <input class="form-control" id="course" name="course"
+                   maxlength="100" required
+                   placeholder="e.g. BCA, MCA, B.Tech"
+                   value="{{ request.form.get('course', student.course if student else '') }}">
+          </div>
+
+          <div class="mb-4">
+            <label for="phone" class="form-label">Phone</label>
+            <input class="form-control" type="tel" id="phone" name="phone"
+                   maxlength="20" required
+                   value="{{ request.form.get('phone', student.phone if student else '') }}">
+          </div>
+
+          <div class="d-flex gap-2">
+            <button class="btn btn-primary" type="submit">
+              {{ 'Update Student' if student else 'Save Student' }}
+            </button>
+            <a class="btn btn-outline-secondary"
+               href="{{ url_for('list_students') }}">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

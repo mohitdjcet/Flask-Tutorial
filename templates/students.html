@@ -1,0 +1,117 @@
+
+{% extends "base.html" %}
+{% block title %}Students | Student Management{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+  <div>
+    <h2 class="fw-bold mb-1">Students</h2>
+    <p class="text-secondary mb-0">Manage your student records</p>
+  </div>
+  <a class="btn btn-primary" href="{{ url_for('add_student') }}">Add Student</a>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-body">
+    <form method="GET" action="{{ url_for('list_students') }}"
+          class="row g-2 mb-4">
+      <div class="col-sm-9">
+        <input
+          class="form-control"
+          type="search"
+          name="q"
+          value="{{ q }}"
+          placeholder="Search name, email or course..."
+        >
+      </div>
+      <div class="col-sm-3 d-flex gap-2">
+        <button class="btn btn-primary flex-grow-1" type="submit">Search</button>
+        <a class="btn btn-outline-secondary" href="{{ url_for('list_students') }}">Reset</a>
+      </div>
+    </form>
+
+    <div class="d-flex justify-content-between mb-3 text-secondary small">
+      <span>Total matching students: {{ pagination.total }}</span>
+      <span>Page {{ pagination.page }} of {{ pagination.pages or 1 }}</span>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-hover align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Course</th>
+            <th>Phone</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for student in students %}
+          <tr>
+            <td>{{ student.id }}</td>
+            <td class="fw-semibold">{{ student.name }}</td>
+            <td>{{ student.email }}</td>
+            <td><span class="badge text-bg-info">{{ student.course }}</span></td>
+            <td>{{ student.phone }}</td>
+            <td>
+              <div class="d-flex gap-2">
+                <a class="btn btn-sm btn-outline-primary"
+                   href="{{ url_for('edit_student', student_id=student.id) }}">
+                  Edit
+                </a>
+                <form method="POST"
+                      action="{{ url_for('delete_student', student_id=student.id) }}"
+                      onsubmit="return confirm('Delete this student?');">
+                  <button class="btn btn-sm btn-outline-danger" type="submit">
+                    Delete
+                  </button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="6" class="text-center text-secondary py-5">
+              {% if q %}
+                No students found for "{{ q }}".
+              {% else %}
+                No students added yet. Click Add Student to get started.
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if pagination.pages > 1 %}
+    <nav aria-label="Student pagination">
+      <ul class="pagination justify-content-center flex-wrap mb-0">
+        <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+          <a class="page-link"
+             href="{{ url_for('list_students', q=q, page=pagination.prev_num) }}">
+            Previous
+          </a>
+        </li>
+
+        {% for p in range(1, pagination.pages + 1) %}
+        <li class="page-item {% if p == pagination.page %}active{% endif %}">
+          <a class="page-link"
+             href="{{ url_for('list_students', q=q, page=p) }}">{{ p }}</a>
+        </li>
+        {% endfor %}
+
+        <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+          <a class="page-link"
+             href="{{ url_for('list_students', q=q, page=pagination.next_num) }}">
+            Next
+          </a>
+        </li>
+      </ul>
+    </nav>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
