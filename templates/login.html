@@ -1,0 +1,32 @@
+
+{% extends "base.html" %}
+{% block title %}Login | My Notes{% endblock %}
+
+{% block content %}
+<div class="auth-card card shadow-sm mx-auto">
+    <div class="card-body p-4">
+        <h2 class="mb-4">Welcome Back</h2>
+
+        <form method="POST">
+            <div class="mb-3">
+                <label class="form-label">Email</label>
+                <input class="form-control" type="email"
+                       name="email" required>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Password</label>
+                <input class="form-control" type="password"
+                       name="password" required>
+            </div>
+
+            <button class="btn btn-primary w-100">Login</button>
+        </form>
+
+        <p class="mt-3 mb-0">
+            New here?
+            <a href="{{ url_for('register') }}">Create an account</a>
+        </p>
+    </div>
+</div>
+{% endblock %}

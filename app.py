@@ -1,144 +1,245 @@
 from flask import (
-    Flask,render_template,request,redirect,url_for,flash,abort
+    Flask,render_template,request,redirect,url_for,flash,session
 )
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import or_,select
-from sqlalchemy.exc import IntegrityError
-from datetime import datetime,timezone
+from functools import wraps
+from werkzeug.security import (
+    generate_password_hash,check_password_hash
+)
 
 app = Flask(__name__)
 
 app.config["SECRET_KEY"]= "change-this-for-local-dev"
-app.config["SQLALCHEMY_DATABASE_URI"]="sqlite:///students.db"
+app.config["SQLALCHEMY_DATABASE_URI"]="sqlite:///notes.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"]= False
 
 db = SQLAlchemy(app)
 
-#Student Model
-class Student(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
+#DB Models
+class User(db.Model):
+    id = db.Column(db.Integer,primary_key=True)
     name = db.Column(db.String(100), nullable=False)
-    email = db.Column(db.String(120), nullable=False)
-    course = db.Column(db.String(100), nullable=False)
-    phone = db.Column(db.String(20), nullable=False)
-    created_at = db.Column(
-        db.DateTime,
-        default=lambda: datetime.now(timezone.utc),
-        nullable=False
+    email = db.Column(db.String(150), unique=True, nullable=False)
+    password_hash= db.Column(db.String(255), nullable=False)
+    notes = db.relationship(
+        "Note",
+        backref="author",
+        cascade="all, delete-orphan"
     )
 
-#Validation and normalization form data
-def get_student_data():
-    name = request.form.get("name","").strip()
-    email = request.form.get("email","").strip()
-    course = request.form.get("course","").strip()
-    phone = request.form.get("phone","").strip()
+class Note(db.Model):
+    id = db.Column(db.Integer,primary_key=True)
+    title = db.Column(db.String(150), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    category = db.Column(
+        db.String(50), nullable=False, default="Personal"
+    )
+    created_at = db.Column(
+        db.DateTime, nullable=False, default=db.func.now()
+    )
+    user_id = db.Column(
+        db.Integer, db.ForeignKey("user.id"), nullable=False
+    )
 
-    if not all([name,email,course,phone]):
-        return None, "All Fields are required"
-    if len(name)> 100:
-        return None, "Name must be 100 Chars or fewer."
-    if len(email)>120 or "@" not in email:
-        return None, "Please enter a valid email Id"
-    if len(course)>100:
-        return None, "Course must be 100 Chars or fewer."
-    if len(phone)>20:
-        return None, "Phone must be 20 Chars or fewer."
+#Custom Login Decorator
+def login_required(view_function):
+    @wraps(view_function)
+    def wrapper(*args,**kwargs):
+        if "user_id" not in session:
+            flash("Please login first,","warning")
+            return redirect(url_for("login"))
+        return view_function(*args,**kwargs)
+    return wrapper
 
-    return{
-        "name":name,
-        "email":email,
-        "course":course,
-        "phone":phone
-    }, None
-
-#List,search and pagination
+#Home
 @app.route("/")
-def index():
-    return redirect(url_for("list_students"))
+def home():
+    if "user_id" in session:
+        return redirect(url_for("notes"))
+    return redirect(url_for("login"))
 
-@app.route("/students")
-def list_students():
-    q = request.args.get("q","").strip()
-    page = request.args.get("page",1,type=int)
-    per_page= 10
-    if page is None or page < 1:
-        page = 1
-    stmt = select(Student)
-    if q:
-        pattern = f"%{q}%"
-        stmt = stmt.where(
-            or_(
-                Student.name.ilike(pattern),
-                Student.email.ilike(pattern),
-                Student.course.ilike(pattern)
+#Registration
+@app.route("/register", methods=["GET","POST"])
+def register():
+    if "user_id" in session:
+        return redirect(url_for("notes"))
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        email = request.form.get("email", "").strip().lower()
+        password = request.form.get("password", "")
+
+        if not name or not email or not password:
+            flash("Please fill in all fields.","danger")
+            return render_template("register.html")
+
+        if len(password) < 8:
+            flash("Password must be at least 8 characters.", "danger")
+            return render_template("register.html")
+
+        existing_user = User.query.filter_by(email=email).first()
+
+        if existing_user:
+            flash("Email already registered.", "warning")
+            return render_template("register.html")
+
+        user = User(
+            name=name,
+            email=email,
+            password_hash= generate_password_hash(password)
+        )
+        db.session.add(user)
+        db.session.commit()
+        flash("Registration Successfull! Please Login.","success")
+        return redirect(url_for("login"))
+    return render_template("register.html")
+
+#Login
+@app.route("/login",methods=["GET","POST"])
+def login():
+    if "user_id" in session:
+        return redirect(url_for("notes"))
+    if request.method == "POST":
+        email = request.form.get("email", "").strip().lower()
+        password = request.form.get("password", "")
+        user = User.query.filter_by(email=email).first()
+        if user and check_password_hash(
+            user.password_hash,password
+        ):
+            session.clear()
+            session["user_id"]= user.id
+            flash("Welcome back","success")
+            return redirect(url_for("notes"))
+        flash("Invalid email or password","danger")
+    return render_template("login.html")
+
+#Logout
+@app.route("/logout",methods=["POST"])
+@login_required
+def logout():
+    session.clear()
+    flash("You have been logged out.","info")
+    return redirect(url_for("login"))
+
+#Notes+search+category
+@app.route("/notes")
+@login_required
+def notes():
+    search = request.args.get("q","").strip()
+    category = request.args.get("category","").strip()
+    query = Note.query.filter_by(
+        user_id = session["user_id"]
+    )
+    if search:
+        pattern = f"%{search}%"
+        query = query.filter(
+            db.or_(
+                Note.title.ilike(pattern),
+                Note.content.ilike(pattern)
             )
         )
-    stmt = stmt.order_by(Student.id.desc())
-    pagination = db.paginate(
-        stmt,
-        page=page,
-        per_page=per_page,
-        error_out=False
-    )
+    if category:
+        query = query.filter_by(category=category)
+
+    all_categories = [
+        row[0]
+        for row in db.session.query(Note.category)
+        .filter_by(user_id=session["user_id"])
+        .distinct()
+        .order_by(Note.category)
+        .all()
+    ]
+    user_notes = query.order_by(
+        Note.created_at.desc()
+    ).all()
     return render_template(
-        "students.html",
-        pagination=pagination,
-        students= pagination.items,
-        q=q
+        "notes.html",
+        notes= user_notes,
+        search=search,
+        category=category,
+        categories= all_categories
     )
 
-
-#Create Student
-@app.route("/students/add", methods=["GET","POST"])
-def add_student():
+#Create Notes
+@app.route("/notes/add",methods=["GET","POST"])
+@login_required
+def add_note():
     if request.method == "POST":
-        data,error = get_student_data()
-        if error:
-            flash(error,"danger")
-            return render_template("student_form.html",student=None)
-        student = Student(**data)
-        db.session.add(student)
-        try:
-            db.session.commit()
-        except IntegrityError:
-            db.session.rollback()
-            flash("This Email Id is already registered","danger")
-            return render_template("student_form.html",student=None)
-        flash("Student Added Successfully","success")
-        return redirect(url_for("list_students"))
-    return render_template("student_form.html",student=None)
 
-#Update Student
-@app.route("/students/<int:student_id>/edit", methods= ["GET","POST"])
-def edit_student(student_id):
-    student = db.get_or_404(Student,student_id)
+        title = request.form.get("title", "").strip()
+        content = request.form.get("content", "").strip()
+        category = request.form.get("category", "Personal").strip()
+
+        if not title or not content:
+            flash("Title and content are required.", "danger")
+            return render_template("note_form.html", note=None)
+
+        note = Note(
+            title=title,
+            content=content,
+            category=(category or "Personal")[:50],
+            user_id=session["user_id"]
+        )
+
+        db.session.add(note)
+        db.session.commit()
+
+        flash("Note created successfully!", "success")
+
+        return redirect(url_for("notes"))
+
+    return render_template("note_form.html", note=None)    
+
+#Edit Notes
+
+@app.route("/notes/<int:note_id>/edit", methods=["GET", "POST"])
+@login_required
+def edit_note(note_id):
+
+    note = Note.query.filter_by(
+        id=note_id,
+        user_id=session["user_id"]
+    ).first_or_404()
+
     if request.method == "POST":
-        data,error = get_student_data()
-        if error:
-            flash(error,"danger")
-            return render_template("student_form.html",student=student)
-        for key, value in data.items():
-            setattr(student,key,value)
-        try:
-            db.session.commit()
-        except IntegrityError:
-            db.session.rollback()
-            flash("This Email Id is already registered","danger")
-            return render_template("student_form.html",student=student)
-        flash("Student Updated Successfully","success")
-        return redirect(url_for("list_students"))
-    return render_template("student_form.html",student=student)
 
-#Delete student
-@app.route("/students/<int:student_id>/delete", methods=["POST"])
-def delete_student(student_id):
-    student = db.get_or_404(Student,student_id)
-    db.session.delete(student)
+        title = request.form.get("title", "").strip()
+        content = request.form.get("content", "").strip()
+        category = request.form.get("category", "Personal").strip()
+
+        if not title or not content:
+            flash("Title and content are required.", "danger")
+            return render_template("note_form.html", note=note)
+
+        note.title = title
+        note.content = content
+        note.category = (category or "Personal")[:50]
+
+        db.session.commit()
+
+        flash("Note updated successfully!", "success")
+
+        return redirect(url_for("notes"))
+
+    return render_template("note_form.html", note=note)
+
+#Delete Notes
+@app.route("/notes/<int:note_id>/delete", methods=["POST"])
+@login_required
+def delete_note(note_id):
+
+    note = Note.query.filter_by(
+        id=note_id,
+        user_id=session["user_id"]
+    ).first_or_404()
+
+    db.session.delete(note)
     db.session.commit()
-    flash("Student deleted successfully !", "success")
-    return redirect(url_for("list_students"))
 
+    flash("Note deleted successfully.", "info")
+
+    return redirect(url_for("notes"))
+
+#Run App
 with app.app_context():
     db.create_all()
 

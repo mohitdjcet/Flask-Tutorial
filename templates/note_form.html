@@ -1,0 +1,59 @@
+
+{% extends "base.html" %}
+{% block title %}{{ 'Edit' if note else 'Add' }} Note{% endblock %}
+
+{% block content %}
+<div class="form-card card shadow-sm mx-auto">
+    <div class="card-body p-4">
+        <h2 class="mb-4">{{ 'Edit Note' if note else 'Create Note' }}</h2>
+
+        <form method="POST">
+            <div class="mb-3">
+                <label class="form-label">Title</label>
+                <input
+                    class="form-control"
+                    name="title"
+                    maxlength="150"
+                    value="{{ note.title if note else '' }}"
+                    required
+                >
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Content</label>
+                <textarea
+                    class="form-control"
+                    name="content"
+                    rows="7"
+                    required
+                >{{ note.content if note else '' }}</textarea>
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label">Category</label>
+                <input
+                    class="form-control"
+                    name="category"
+                    maxlength="50"
+                    list="category-options"
+                    value="{{ note.category if note else 'Personal' }}"
+                    placeholder="Work, Personal, Study..."
+                >
+                <datalist id="category-options">
+                    <option value="Work">
+                    <option value="Personal">
+                    <option value="Study">
+                    <option value="Ideas">
+                </datalist>
+            </div>
+
+            <button class="btn btn-primary">
+                {{ 'Update Note' if note else 'Save Note' }}
+            </button>
+
+            <a class="btn btn-outline-secondary"
+               href="{{ url_for('notes') }}">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

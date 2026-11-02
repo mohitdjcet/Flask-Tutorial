@@ -1,0 +1,58 @@
+
+body {
+    background: #f5f7fb;
+    color: #202938;
+    min-height: 100vh;
+}
+
+.auth-card {
+    max-width: 460px;
+    margin-top: 40px;
+    border: 0;
+    border-radius: 14px;
+}
+
+.form-card {
+    max-width: 760px;
+    border: 0;
+    border-radius: 14px;
+}
+
+.note-card {
+    border: 0;
+    border-radius: 14px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.note-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08) !important;
+}
+
+.note-content {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    max-height: 180px;
+    overflow-y: auto;
+}
+
+.empty-state {
+    background: white;
+    border-radius: 14px;
+}
+
+.form-control,
+.form-select {
+    padding: 10px 12px;
+}
+
+@media (max-width: 576px) {
+    .auth-card,
+    .form-card {
+        margin-top: 16px;
+    }
+
+    h1 {
+        font-size: 1.8rem;
+    }
+}
